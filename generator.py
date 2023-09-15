@@ -23,12 +23,22 @@ class Column():
         number_of_keys = len(self.keys)
         self.keys.append(KeyRect(self.x, self.y+number_of_keys*key_spacing))
 
+class Controller():
+    w = 51
+    h = 21
+    def __init__(self, x, y, rot=0):
+        self.rot = rot
+        self.x = x
+        self.y = y
+
 class Board():
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.cols = []
         self.keys = []
+        self.controllers = []
+        self.displays = []
 
     def addCol(self, stagger, extra_space=0):
         number_of_cols = len(self.cols)
@@ -51,7 +61,7 @@ def rounded_rectangle(dwg, x, y, width, height, rx, ry):
 
 # Generate top 
 topLayer = Board(0,0)
-topLayer.addCol(10, bevel_width+key_spacing+5)
+topLayer.addCol(10, bevel_width+key_spacing+3)
 topLayer.addCol(5)
 topLayer.addCol(0)
 topLayer.addCol(15)
