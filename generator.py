@@ -1,6 +1,6 @@
 import svgwrite 
 
-bevel_width = 10
+bevel_width = 5
 hole_size = 14.265
 key_spacing = 19.05
 
@@ -51,19 +51,23 @@ def rounded_rectangle(dwg, x, y, width, height, rx, ry):
 
 # Generate top 
 topLayer = Board(0,0)
-topLayer.addCol(10, bevel_width+key_spacing+5)
-topLayer.addCol(5)
-topLayer.addCol(0)
-topLayer.addCol(15)
-topLayer.addCol(15)
+stagger0 = 10
+stagger1 = stagger0-5
+stagger2 = stagger1-2
+stagger3 = stagger2+7
+topLayer.addCol(stagger0, bevel_width+key_spacing+5)
+topLayer.addCol(stagger1)
+topLayer.addCol(stagger2)
+topLayer.addCol(stagger3)
+topLayer.addCol(stagger3)
 
 for i in range(0,5):
     topLayer.cols[i].addKey()
     topLayer.cols[i].addKey()
     topLayer.cols[i].addKey()
 
-topLayer.addKey(bevel_width,key_spacing+10+key_spacing/2)
-topLayer.addKey(bevel_width,key_spacing*2+12+key_spacing/2)
+topLayer.addKey(bevel_width,bevel_width + stagger0 + key_spacing/3)
+topLayer.addKey(bevel_width,bevel_width + stagger0 + key_spacing + key_spacing/3)
 
 keyboard_width = bevel_width*2 + topLayer.cols[-1].x+ topLayer.cols[-1].w
 keyboard_height = 200
