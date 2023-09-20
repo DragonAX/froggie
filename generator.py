@@ -26,6 +26,18 @@ def scale_points(points, f):
     print(new_points)
     return new_points
 
+def mirror_points(points, axis="x"):
+    mirrored_points = []
+    if axis == "x":
+        for x, y in points:
+            mirrored_points.append((-x, y))
+    elif axis == "y":
+        for x, y in points:
+            mirrored_points.append((x, -y))
+    else:
+        raise ValueError("Invalid axis. Use 'x' or 'y'.")
+    return mirrored_points
+
 class KeyRect():
     w = hole_size
     h = hole_size
@@ -145,10 +157,17 @@ for keyrect in board.keys:
     rounded_rectangle(dwg, keyrect.x+top_left[0], keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+top_left[0]+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
 
 
+points = [top_left]
+points.extend(transpose_points(board.controllers[0].points,top_left[0], top_left[1]))
+points.extend([top_right, bottom_right, bottom_left])
+
 outline = dwg.polygon(fill='none', stroke='black')
-outline.points.extend(scale_points([top_left], MM))
-outline.points.extend(scale_points(transpose_points(board.controllers[0].points,top_left[0], top_left[1]),MM))
-outline.points.extend(scale_points([top_right, bottom_right, bottom_left], MM))
+outline.points.extend(scale_points(points, MM))
+dwg.add(outline)
+
+outline = dwg.polygon(fill='none', stroke='black')
+points = transpose_points(mirror_points(points), keyboard_width*2+layer_margin*3, 0)
+outline.points.extend(scale_points(points, MM))
 dwg.add(outline)
 
 
