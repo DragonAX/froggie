@@ -165,11 +165,11 @@ outline = dwg.polygon(fill='none', stroke='black')
 outline.points.extend(scale_points(points, MM))
 dwg.add(outline)
 
+mirror_point = keyboard_width*2+layer_margin*3
 outline = dwg.polygon(fill='none', stroke='black')
-points = transpose_points(mirror_points(points), keyboard_width*2+layer_margin*3, 0)
+points = transpose_points(mirror_points(points), mirror_point, 0)
 outline.points.extend(scale_points(points, MM))
 dwg.add(outline)
-
 
 # layer 3 (same as plate but bigger holes)
 top_left = (layer_margin, keyboard_height+layer_margin*2)
