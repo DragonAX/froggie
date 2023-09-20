@@ -1,11 +1,17 @@
 import svgwrite 
 from svgwrite import cm, mm
 MM = 3.7795
-
-bevel_width = 5
-hole_size = 14 #14.265
+layer_margin = 10 # space between layer cutouts
+bevel_width = 6 # does not account for keycaps
+hole_size = 14.265
+bigger_hole_delta = 1
+BHD = bigger_hole_delta
 key_spacing = 19.05
+keycap_hole_size = key_spacing
 corner_radius = 0.1
+
+key_colour="purple"
+boarder_colour="black"
 
 def transpose_points(points, dx, dy):
     new_points = []
@@ -85,68 +91,111 @@ class Board():
 def rounded_rectangle(dwg, x, y, width, height, rx, ry, txfrm = None):
     print("rounded_rectangle: "+str([x,y,width, height, rx, ry]))
     if txfrm == None:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke='black'))
+        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=key_colour))
     else:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke='black', transform=txfrm))
+        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=key_colour, transform=txfrm))
 
 
 
-dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"600mm", f"400mm"))
+dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
 # Generate top 
-topLayer = Board(0,0)
+board = Board(0,0)
 stagger0 = 10
 stagger1 = stagger0-2.5
 stagger2 = stagger1-2.5
 stagger3 = stagger2+2.6
 stagger4 = stagger3+4.5
-topLayer.addCol(stagger0, bevel_width+key_spacing+2+4)
-topLayer.addCol(stagger1)
-topLayer.addCol(stagger2)
-topLayer.addCol(stagger3)
-topLayer.addCol(stagger4)
-topLayer.addCol(stagger4)
+board.addCol(stagger0, bevel_width+key_spacing+2+4)
+board.addCol(stagger1)
+board.addCol(stagger2)
+board.addCol(stagger3)
+board.addCol(stagger4)
+board.addCol(stagger4)
 
 for i in range(0,6):
-    topLayer.cols[i].addKey()
-    topLayer.cols[i].addKey()
-    topLayer.cols[i].addKey()
+    board.cols[i].addKey()
+    board.cols[i].addKey()
+    board.cols[i].addKey()
 
-#topLayer.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
-topLayer.addKey(bevel_width,bevel_width + stagger0 + key_spacing + key_spacing/2) # bottom ectra key
-topLayer.addKey(topLayer.cols[1].x+key_spacing/2, topLayer.cols[1].keys[2].y+hole_size+6) # thumb 3
-topLayer.addKey(topLayer.cols[1].x+key_spacing/2 - 22, topLayer.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
-topLayer.addKey(topLayer.cols[0].x-key_spacing +2, topLayer.cols[0].keys[2].y+hole_size+10.25,-25 ) # thumb 1
-
-
+#board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
+board.addKey(bevel_width,bevel_width + stagger0 + key_spacing + key_spacing/2) # bottom ectra key
+board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6) # thumb 3
+board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
+board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,-25 ) # thumb 1
 
 
-topLayer.controllers.append(Controller(dwg, bevel_width+5, 0))
 
-keyboard_width = bevel_width*2 + topLayer.cols[-1].x+ topLayer.cols[-1].w
+
+board.controllers.append(Controller(dwg, bevel_width+5, 0))
+
+keyboard_width = bevel_width*2 + board.cols[-1].x+ board.cols[-1].w
 keyboard_height = 100
 
-for col in topLayer.cols:
-    for keyrect in col.keys:
-        rounded_rectangle(dwg, keyrect.x, keyrect.y, keyrect.w, keyrect.h, corner_radius,corner_radius)
-for keyrect in topLayer.keys:
-    #rounded_rectangle(dwg, keyrect.x, keyrect.y, keyrect.w, keyrect.h, corner_radius,corner_radius)
-    rounded_rectangle(dwg, keyrect.x, keyrect.y, keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+keyrect.w/2), MM*(keyrect.y+keyrect.h/2)))
-#for controller in topLayer.controllers:
-    #rounded_rectangle(dwg, keyrect.x, keyrect.y, keyrect.w, keyrect.h, corner_radius,corner_radius)
-    #dwg.add(controller.path)
+# Layer 4 (the plate)
 
-#rounded_rectangle(dwg, 0, 0, keyboard_width, keyboard_height, 5, 5)
-top_left = (0,0)
-top_right = (keyboard_width, 0)
-bottom_right = (keyboard_width, keyboard_height)
-bottom_left = (0, keyboard_height)
+top_left = (layer_margin,layer_margin)
+top_right = (top_left[0]+keyboard_width, top_left[1])
+bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
+bottom_left = (top_left[0], top_left[1]+keyboard_height)
+
+for col in board.cols:
+    for keyrect in col.keys:
+        rounded_rectangle(dwg, keyrect.x+top_left[0], keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
+for keyrect in board.keys:
+    rounded_rectangle(dwg, keyrect.x+top_left[0], keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+top_left[0]+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
+
 
 outline = dwg.polygon(fill='none', stroke='black')
 outline.points.extend(scale_points([top_left], MM))
-outline.points.extend(scale_points(topLayer.controllers[0].points, MM))
+outline.points.extend(scale_points(transpose_points(board.controllers[0].points,top_left[0], top_left[1]),MM))
 outline.points.extend(scale_points([top_right, bottom_right, bottom_left], MM))
 dwg.add(outline)
 
-rounded_rectangle(dwg, keyboard_width*2+10, 0, keyboard_width, keyboard_height,  5, 5)
-rounded_rectangle(dwg, 0, keyboard_height*2+10, keyboard_width, keyboard_height, 5,5)
+
+# layer 3 (same as plate but bigger holes)
+top_left = (layer_margin, keyboard_height+layer_margin*2)
+top_right = (top_left[0]+keyboard_width, top_left[1])
+bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
+bottom_left = (top_left[0], top_left[1]+keyboard_height)
+
+for col in board.cols:
+    for keyrect in col.keys:
+        rounded_rectangle(dwg, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius)
+for keyrect in board.keys:
+    rounded_rectangle(dwg, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), MM*(keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2)))
+outline = dwg.polygon(fill='none', stroke='black')
+outline.points.extend(scale_points([top_left], MM))
+outline.points.extend(scale_points(transpose_points(board.controllers[0].points,top_left[0], top_left[1]),MM))
+outline.points.extend(scale_points([top_right, bottom_right, bottom_left], MM))
+dwg.add(outline)
+
+# layer 2 (just the outline, where all the wiring is)
+top_left = (layer_margin, keyboard_height*2+layer_margin*3)
+top_right = (top_left[0]+keyboard_width, top_left[1])
+bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
+bottom_left = (top_left[0], top_left[1]+keyboard_height)
+
+outline = dwg.polygon(fill='none', stroke='black')
+outline.points.extend(scale_points([top_left], MM))
+outline.points.extend(scale_points([top_right, bottom_right, bottom_left], MM))
+dwg.add(outline)
+
+outline = dwg.polygon(fill='none', stroke=key_colour)
+points = [(top_left[0]+bevel_width, top_left[1]+bevel_width),
+          (top_left[0]+keyboard_width-bevel_width, top_left[1]+bevel_width),
+          (top_left[0]+keyboard_width-bevel_width, top_left[1]+keyboard_height-bevel_width),
+          (top_left[0]+bevel_width, top_left[1]+keyboard_height-bevel_width)]
+outline.points.extend(scale_points(points, MM))
+dwg.add(outline)
+
+# layer 1 (bottom)
+top_left = (layer_margin, keyboard_height*3+layer_margin*4)
+top_right = (top_left[0]+keyboard_width, top_left[1])
+bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
+bottom_left = (top_left[0], top_left[1]+keyboard_height)
+
+outline = dwg.polygon(fill='none', stroke='black')
+outline.points.extend(scale_points([top_left], MM))
+outline.points.extend(scale_points([top_right, bottom_right, bottom_left], MM))
+dwg.add(outline)
 dwg.save()
