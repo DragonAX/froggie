@@ -108,6 +108,33 @@ def rounded_rectangle(dwg, x, y, width, height, rx, ry, txfrm = None):
         dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=key_colour, transform=txfrm))
 
 
+def draw_outline(dwg, points):
+    mirror_point = keyboard_width*2+layer_margin*3
+    
+    outline = dwg.polygon(fill='none', stroke='black')
+    outline.points.extend(scale_points(points, MM))
+    dwg.add(outline)
+    
+    outline = dwg.polygon(fill='none', stroke='black')
+    points = transpose_points(mirror_points(points), mirror_point, 0)
+    outline.points.extend(scale_points(points, MM))
+    dwg.add(outline)
+
+def draw_keyholes(dwg, board, top_left):
+    mirror_point = keyboard_width*2+layer_margin*3
+    for col in board.cols:
+        for keyrect in col.keys:
+            x = keyrect.x+top_left[0]
+            inv_x = (x*-1)+mirror_point-keyrect.w
+            rounded_rectangle(dwg, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
+            rounded_rectangle(dwg, inv_x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
+    for keyrect in board.keys:
+        x = keyrect.x+top_left[0]
+        inv_x = (x*-1)+mirror_point-keyrect.w
+        rounded_rectangle(dwg, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
+        rounded_rectangle(dwg, inv_x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(inv_x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
+    
+
 
 dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
 # Generate top 
@@ -150,26 +177,13 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-for col in board.cols:
-    for keyrect in col.keys:
-        rounded_rectangle(dwg, keyrect.x+top_left[0], keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
-for keyrect in board.keys:
-    rounded_rectangle(dwg, keyrect.x+top_left[0], keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+top_left[0]+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
 
+draw_keyholes(dwg, board, top_left)
 
 points = [top_left]
 points.extend(transpose_points(board.controllers[0].points,top_left[0], top_left[1]))
 points.extend([top_right, bottom_right, bottom_left])
-
-outline = dwg.polygon(fill='none', stroke='black')
-outline.points.extend(scale_points(points, MM))
-dwg.add(outline)
-
-mirror_point = keyboard_width*2+layer_margin*3
-outline = dwg.polygon(fill='none', stroke='black')
-points = transpose_points(mirror_points(points), mirror_point, 0)
-outline.points.extend(scale_points(points, MM))
-dwg.add(outline)
+draw_outline(dwg, points)
 
 # layer 3 (same as plate but bigger holes)
 top_left = (layer_margin, keyboard_height+layer_margin*2)
