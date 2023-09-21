@@ -5,7 +5,7 @@ import math
 MM = 3.7795
 
 
-layer_margin = 10 # space between layer cutouts
+layer_margin = 2.8 # space between layer cutouts
 
 # key placement stuff
 bevel_width = 6 # does not account for keycaps
@@ -31,6 +31,7 @@ screw_hole_r = 1.8/2
 # Line colouring
 inline_colour="purple"
 boarder_colour="black"
+
 
 
 def transpose_point(point, dx, dy):
@@ -128,8 +129,6 @@ def draw_keyhole(dwg, x, y, width, height, rx, ry, txfrm = None):
 
 
 def draw_outline(dwg, points, colour = "black"):
-    mirror_point = keyboard_width*2+layer_margin*3
-    
     outline = dwg.polygon(fill='none', stroke=colour)
     outline.points.extend(scale_points(points, MM))
     dwg.add(outline)
@@ -187,7 +186,12 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left):
 
 
 def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
-    holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2)]
+    holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2),
+            transpose_point(top_left, keyboard_width-bevel_width, slope_tweak_top+bevel_width),
+            transpose_point(top_left, board.cols[3].x+key_spacing/2, board.cols[3].y+key_spacing*4),
+            transpose_point(top_left, bevel_width+inside_infill_magic_number/2, board.cols[0].keys[2].y+2*key_spacing/3)
+            ]
+    holes.extend(transpose_points(mirror_points(holes), mirror_point, 0))
     for hole in holes:
         dwg.add(dwg.circle((hole[0]*mm, hole[1]*mm), r=screw_hole_r, fill='none', stroke=inline_colour))
     
@@ -209,7 +213,7 @@ board.addCol(stagger3)
 board.addCol(stagger4)
 board.addCol(stagger4)
 
-for i in range(0,6):
+for i in range(0,len(board.cols)):
     board.cols[i].addKey()
     board.cols[i].addKey()
     board.cols[i].addKey()
@@ -226,6 +230,8 @@ board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+1
 board.controllers.append(Controller(dwg, bevel_width+5, 0))
 
 keyboard_width = bevel_width*2 + board.cols[-1].x+ board.cols[-1].w
+
+mirror_point = keyboard_width*2+layer_margin*3
 
 # Layer 4 (the plate)
 
@@ -256,6 +262,8 @@ for keyrect in board.keys:
 points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
 draw_outline(dwg, points)
 
+draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left)
+
 #outline = dwg.polygon(fill='none', stroke='black')
 #outline.points.extend(scale_points([top_left], MM))
 #outline.points.extend(scale_points(transpose_points(board.controllers[0].points,top_left[0], top_left[1]),MM))
@@ -285,5 +293,7 @@ bottom_left = (top_left[0], top_left[1]+keyboard_height)
 points = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
 draw_outline(dwg, points)
 
+
+draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left)
 
 dwg.save()
