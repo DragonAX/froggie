@@ -23,6 +23,10 @@ slope_tweak_bottom = 20
 corner_cut_tweak = 20
 corner_cut_tweak_far = 15
 
+controller_magic_number=2
+top_infill_magic_number=8
+inside_infill_magic_number=10
+
 # Line colouring
 inline_colour="purple"
 boarder_colour="black"
@@ -81,12 +85,12 @@ class Controller():
         self.y = y
         self.points = transpose_points([(0,0),
                        (0,bevel_width),
-                       (-4, bevel_width),
-                       (-4, bevel_width+24.5),
-                       (-4+19, bevel_width+24.5),
-                       (-4+19, bevel_width),
-                       (-4+19-4, bevel_width),
-                       (-4+19-4, 0)], x, y)
+                       (-controller_magic_number, bevel_width),
+                       (-controller_magic_number, bevel_width+24.5),
+                       (-controller_magic_number+19, bevel_width+24.5),
+                       (-controller_magic_number+19, bevel_width),
+                       (-controller_magic_number+19-controller_magic_number, bevel_width),
+                       (-controller_magic_number+19-controller_magic_number, 0)], x, y)
 
         #self.path = dwg.path(["V {bevel_width}", "H -4", "V 24.5", "H 19", "V -24.5", "H -4", "V {bevel_width}"], stroke="black",
         #                              fill="none",
@@ -162,12 +166,21 @@ def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=Fal
 
 def calculate_inline(top_left, top_right, bottom_right, bottom_left):
     points = [transpose_point(top_left,bevel_width, bevel_width)]
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width))
-    points.extend([transpose_point(top_right,-bevel_width,slope_tweak_top+bevel_width), 
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width))
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width+top_infill_magic_number))
+    points.append((board.cols[2].x, top_left[1]+bevel_width))
+    points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width))
+    points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size*2))
+    points.extend([ 
                    transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width),
                    transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width),
+                   (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*3.5),
+                   (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
                    transpose_point(bottom_left,corner_cut_tweak_far+bevel_width,-bevel_width),
-                   transpose_point(bottom_left, bevel_width, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width)])
+                   transpose_point(bottom_left, bevel_width, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width),
+                   transpose_point(bottom_left, bevel_width+inside_infill_magic_number, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width),
+                   transpose_point(bottom_left, bevel_width+inside_infill_magic_number, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width-inside_infill_magic_number),
+                   transpose_point(bottom_left, bevel_width, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width-inside_infill_magic_number)])
     return points
 
 dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
