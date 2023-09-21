@@ -26,10 +26,12 @@ corner_cut_tweak_far = 15
 controller_magic_number=2
 top_infill_magic_number=8
 inside_infill_magic_number=10
+screw_hole_r = 1.8/2
 
 # Line colouring
 inline_colour="purple"
 boarder_colour="black"
+
 
 def transpose_point(point, dx, dy):
     return ((point[0]+dx, point[1]+dy))
@@ -183,6 +185,13 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left):
                    transpose_point(bottom_left, bevel_width, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width-inside_infill_magic_number)])
     return points
 
+
+def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
+    holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2)]
+    for hole in holes:
+        dwg.add(dwg.circle((hole[0]*mm, hole[1]*mm), r=screw_hole_r, fill='none', stroke=inline_colour))
+    
+
 dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
 # Generate top 
 board = Board(0,0)
@@ -265,6 +274,7 @@ draw_outline(dwg, points)
 points = calculate_inline(top_left, top_right, bottom_right, bottom_left)
 draw_outline(dwg, points, inline_colour)
 
+draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left)
 
 # layer 1 (bottom)
 top_left = (layer_margin, keyboard_height*3+layer_margin*4)
