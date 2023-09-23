@@ -34,6 +34,8 @@ boarder_colour="black"
 
 keycap_delta = (key_spacing-hole_size)/2
 
+thumb_scale = 1.75
+
 def transpose_point(point, dx, dy):
     return ((point[0]+dx, point[1]+dy))
 
@@ -107,12 +109,13 @@ def rotate_points_around(points, angle_degrees, rotation_point):
 
 
 class KeyRect():
-    w = hole_size
-    h = hole_size
-    def __init__(self, x,y, rot=0):
+    def __init__(self, x,y, rot=0, scale=1):
+        self.w = hole_size
+        self.h = hole_size
         self.x = x
         self.y = y
         self.rot=rot
+        self.scale=scale
     def getCenter(self):
         return (self.x+self.w/2, self.y+self.h/2)
     def getPoints(self):
@@ -125,11 +128,12 @@ class KeyRect():
 
 class KeyCapRect(KeyRect):
     def __init__(self, keyrect):
-        super().__init__(keyrect.x, keyrect.y, keyrect.rot)
+        super().__init__(keyrect.x, keyrect.y, keyrect.rot, keyrect.scale)
         delta = (key_spacing-hole_size)/2
-        self.w = key_spacing
+        xdelta = (key_spacing*self.scale-self.w)/2
+        self.w = key_spacing*self.scale
         self.h = key_spacing
-        self.x = self.x-delta
+        self.x = self.x-xdelta
         self.y = self.y-delta
         
 
@@ -182,8 +186,8 @@ class Board():
             self.cols.append(Column(self.x+key_spacing*number_of_cols+extra_space, self.y+stagger+bevel_width, key_spacing))
         
         
-    def addKey(self, x, y, rot=0):
-        self.keys.append(KeyRect(x, y, rot))
+    def addKey(self, x, y, rot=0, scale=1):
+        self.keys.append(KeyRect(x, y, rot, scale))
 
 
 
@@ -245,8 +249,8 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left):
     points.extend(outline)
     
     
-    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]-controller_magic_number, 0))
-    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]-controller_magic_number, bevel_width))
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0], 0))
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0], bevel_width))
 
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width))
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width+top_infill_magic_number))
@@ -328,7 +332,7 @@ for i in range(0,len(board.cols)):
 board.addKey(bevel_width+offset_of_extra_key,bevel_width + stagger0 + key_spacing + key_spacing/2) # extra key
 board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6) # thumb 3
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
-board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,-25 ) # thumb 1
+board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 
 
 
