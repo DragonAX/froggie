@@ -4,6 +4,9 @@ import math
 
 MM = 3.7795
 
+kerf = 0.05
+
+right_side = True
 
 layer_margin = 2.8 # space between layer cutouts
 
@@ -17,7 +20,6 @@ keycap_hole_size = key_spacing
 corner_radius = 0.01
 
 # case shaping
-keyboard_height = 110
 slope_tweak_top = 8
 slope_tweak_bottom = 20
 corner_cut_tweak = 20
@@ -29,8 +31,9 @@ inside_infill_magic_number=10
 screw_hole_r = 1.8/2
 
 # Line colouring
-inline_colour="purple"
-boarder_colour="black"
+inline_colour="#0000ff"
+outline_colour="#000000"
+tester_colour="#00ff00"
 
 keycap_delta = (key_spacing-hole_size)/2
 
@@ -106,7 +109,35 @@ def rotate_points_around(points, angle_degrees, rotation_point):
 
     return rotated_points
 
-
+class Battery():
+    def __init__(self, x, y, rot=0):
+        self.w = 10+2
+        self.h = 18+3
+        self.d = 0.6
+        self.lead_length = 26.7
+        self.bumper = 5
+        self.x = x
+        self.y = y
+        self.rot = rot
+    def getWidth(self):
+        return self.lead_length
+    def getCenter(self):
+        return (self.lead_length/2, self.h/2)
+    def getPoints(self):
+        points = [(0,0),
+                  (self.lead_length, 0),
+                  (self.lead_length, 5),
+                  (self.w+self.bumper, 5),
+                  (self.w+self.bumper, self.d),
+                  (self.w, self.d),
+                  (self.w, self.h-self.d),
+                  (self.w+self.bumper, self.h-self.d),
+                  (self.w+self.bumper, self.h-5),
+                  (self.lead_length, self.h-5),
+                  (self.lead_length, self.h),
+                  (0, self.h)]
+        points = transpose_points(rotate_points_around(points, self.rot, self.getCenter()),self.x,self.y)
+        return points
 
 class KeyRect():
     def __init__(self, x,y, rot=0, scale=1):
@@ -150,8 +181,8 @@ class Column():
         self.keys.append(KeyRect(self.x, self.y+number_of_keys*key_spacing))
 
 class Controller():
-    w = 18+1
-    h = 23.5+1
+    w = 18.3+0.2
+    h = 34.1+0.2
     def __init__(self,dwg,  x, y, rot=0):
         self.rot = rot
         self.x = x
@@ -191,14 +222,14 @@ class Board():
 
 
 
-def draw_keyhole(dwg, x, y, width, height, rx, ry, txfrm = None):
+def draw_keyhole(dwg, x, y, width, height, rx, ry, txfrm = None, colour=inline_colour):
     if txfrm == None:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=inline_colour))
+        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=colour))
     else:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=inline_colour, transform=txfrm))
+        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=colour, transform=txfrm))
 
 
-def draw_outline(dwg, points, colour = "black"):
+def draw_outline(dwg, points, colour = outline_colour):
     outline = dwg.polygon(fill='none', stroke=colour)
     outline.points.extend(scale_points(points, MM))
     dwg.add(outline)
@@ -235,7 +266,7 @@ def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=Fal
                    transpose_point(bottom_left, 0, -math.tan(math.radians(90-25))*corner_cut_tweak_far)])
     return points
 
-def calculate_inline(top_left, top_right, bottom_right, bottom_left):
+def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
 
     outline = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
 
@@ -256,7 +287,11 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left):
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width+top_infill_magic_number))
     points.append((top_left[0]+board.cols[2].x, top_left[1]+bevel_width))
     points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width))
-    points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size*2))
+    if (b):
+        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size*4))
+    else:
+        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size))
+        points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width+hole_size))
     points.extend([ 
                    transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width),
                    transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width),
@@ -303,7 +338,13 @@ def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
     #holes.extend(transpose_points(mirror_points(holes), mirror_point, 0))
     for hole in holes:
         dwg.add(dwg.circle((hole[0]*mm, hole[1]*mm), r=screw_hole_r, fill='none', stroke=inline_colour))
-    
+
+def draw_battery(dwg, top_left):
+    points = transpose_points(board.battery.getPoints(), top_left[0], top_left[1])
+
+    draw_outline(dwg, points, inline_colour)
+
+### BOARD Definition
 
 dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
 dwgPreview = svgwrite.Drawing('keyboard_case_preview.svg', profile='full', size=(f"400mm", f"600mm"))
@@ -311,7 +352,7 @@ dwgPreview = svgwrite.Drawing('keyboard_case_preview.svg', profile='full', size=
 board = Board(0,0)
 offset_of_extra_key = 4
 offset_from_extra_key = 2
-stagger0 = 10
+stagger0 = key_spacing+bevel_width*3
 stagger1 = stagger0-2.5
 stagger2 = stagger1-2.5
 stagger3 = stagger2+2.6
@@ -328,28 +369,43 @@ for i in range(0,len(board.cols)):
     board.cols[i].addKey()
     board.cols[i].addKey()
 
+
+
 #board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
+board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 board.addKey(bevel_width+offset_of_extra_key,bevel_width + stagger0 + key_spacing + key_spacing/2) # extra key
 board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6) # thumb 3
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
-board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 
+# Func row
+for i in range(6):
+    board.addKey(board.cols[0].x+key_spacing*i,bevel_width*3) # extra key
 
-
-
+keyboard_height = board.keys[0].y+32 
+print(keyboard_height)
+print(board.keys[0].y)
 board.controllers.append(Controller(dwg, bevel_width+5, 0))
 
-keyboard_width = bevel_width*2 + board.cols[-1].x+ board.cols[-1].w
+####
+
+
+
+batt = Battery(0,0, 180)
+keyboard_width = bevel_width*2 + board.cols[-1].x+ board.cols[-1].w + batt.getWidth()
 
 mirror_point = keyboard_width*2+layer_margin*3
 
 
+batt.x = keyboard_width-batt.getWidth()-bevel_width
+batt.y = keyboard_height/4
+board.battery=batt
 
 def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
     draw_keyholes(d, board, top_left)
     
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
+    draw_battery(d, top_left)
 
 def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
     for col in board.cols:
@@ -362,14 +418,17 @@ def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
     draw_outline(d, points)
     
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
+    draw_battery(d, top_left)
 
 
-def doLayer2(d, top_left, top_right, bottom_right, bottom_left):
-    points = calculate_inline(top_left, top_right, bottom_right, bottom_left)
-    draw_outline(d, points, inline_colour)
+def doLayer2(d, top_left, top_right, bottom_right, bottom_left, b=False):
+    points = calculate_inline(top_left, top_right, bottom_right, bottom_left, b)
+    draw_outline(d, points, outline_colour)
     
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
-
+    
+    if(b):
+        draw_battery(d, top_left)
 
 def doLayer1(d, top_left, top_right, bottom_right, bottom_left):
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
@@ -377,13 +436,24 @@ def doLayer1(d, top_left, top_right, bottom_right, bottom_left):
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
 
 
-def doLayer0(d, top_left, top_right, bottom_right, bottom_left):
+def doLayer0(d, top_left, top_right, bottom_right, bottom_left, b = False):
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
     draw_outline(d, points)
     
     points_list = calculate_top_inline(top_left, top_right, bottom_right, bottom_left)
     for points in points_list:
         draw_outline(d, points, inline_colour)
+    if (b):
+        draw_battery(d, top_left)
+
+def doHoleTester(d, top_left):
+    draw_keyhole(d, top_left[0], top_left[1], 14-0.1, 14-0.1, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing, top_left[1], 14-0.05, 14-0.05, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing*2, top_left[1], 14, 14, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing*3, top_left[1], 14.05, 14.05, 0, 0, colour=tester_colour)
+    for i in range(1,8):
+        draw_keyhole(d, top_left[0]+key_spacing*(3+i), top_left[1], 14+(i/10), 14+(i/10), 0, 0, colour=tester_colour)
+
 
 # Layer 4 (the plate)
 
@@ -409,7 +479,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer2(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer2(dwg, top_left, top_right, bottom_right, bottom_left, b=False)
 
 
 # layer 2b (just the outline, where all the wiring is)
@@ -418,7 +488,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer2(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer2(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
 
 # layer 1 (bottom)
 top_left = (layer_margin, keyboard_height*3+layer_margin*4)
@@ -443,12 +513,14 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-points = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
-draw_outline(dwg, points)
+doLayer0(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
 
-points_list = calculate_top_inline(top_left, top_right, bottom_right, bottom_left)
-for points in points_list:
-    draw_outline(dwg, points, inline_colour)
+
+# hole-tester
+
+top_left = (layer_margin*3+keyboard_width, keyboard_height*4+layer_margin*5)
+
+doHoleTester(dwg, top_left)
 
 dwg.save()
 
@@ -461,7 +533,8 @@ bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
 doLayer0(dwgPreview, top_left, top_right, bottom_right, bottom_left)
 doLayer1(dwgPreview, top_left, top_right, bottom_right, bottom_left)
-doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left)
+doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=False)
 doLayer3(dwgPreview, top_left, top_right, bottom_right, bottom_left)
 doLayer4(dwgPreview, top_left, top_right, bottom_right, bottom_left)
 
