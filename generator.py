@@ -12,7 +12,7 @@ layer_margin = 2.8 # space between layer cutouts
 
 # key placement stuff
 bevel_width = 6 # does not account for keycaps
-hole_size = 14.265
+hole_size = 14+kerf #14.265
 bigger_hole_delta = 1
 BHD = bigger_hole_delta
 key_spacing = 19.05
@@ -447,12 +447,12 @@ def doLayer0(d, top_left, top_right, bottom_right, bottom_left, b = False):
         draw_battery(d, top_left)
 
 def doHoleTester(d, top_left):
-    draw_keyhole(d, top_left[0], top_left[1], 14-0.1, 14-0.1, 0, 0, colour=tester_colour)
-    draw_keyhole(d, top_left[0]+key_spacing, top_left[1], 14-0.05, 14-0.05, 0, 0, colour=tester_colour)
-    draw_keyhole(d, top_left[0]+key_spacing*2, top_left[1], 14, 14, 0, 0, colour=tester_colour)
-    draw_keyhole(d, top_left[0]+key_spacing*3, top_left[1], 14.05, 14.05, 0, 0, colour=tester_colour)
-    for i in range(1,8):
-        draw_keyhole(d, top_left[0]+key_spacing*(3+i), top_left[1], 14+(i/10), 14+(i/10), 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0], top_left[1], hole_size-0.1, hole_size-0.1, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing, top_left[1], hole_size-0.05, hole_size-0.05, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing*2, top_left[1], hole_size, hole_size, 0, 0, colour=tester_colour)
+    draw_keyhole(d, top_left[0]+key_spacing*3, top_left[1], hole_size+0.05, hole_size+0.05, 0, 0, colour=tester_colour)
+    for i in range(1,7):
+        draw_keyhole(d, top_left[0]+key_spacing*(3+i), top_left[1], hole_size+(i/10), hole_size+(i/10), 0, 0, colour=tester_colour)
 
 
 # Layer 4 (the plate)
