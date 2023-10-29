@@ -4,7 +4,6 @@ import math
 
 MM = 3.7795
 
-kerf = 0.05
 
 right_side = True
 
@@ -12,7 +11,7 @@ layer_margin = 2.8 # space between layer cutouts
 
 # key placement stuff
 bevel_width = 6 # does not account for keycaps
-hole_size = 14+kerf #14.265
+hole_size = 14-0.25 #Tweaked for best fit
 bigger_hole_delta = 1
 BHD = bigger_hole_delta
 key_spacing = 19.05
@@ -392,7 +391,7 @@ board.controllers.append(Controller(dwg, bevel_width+5, 0))
 
 batt = Battery(0,0, 180)
 keyboard_width = bevel_width*2 + board.cols[-1].x+ board.cols[-1].w + batt.getWidth()
-
+print("Width"+str(keyboard_width))
 mirror_point = keyboard_width*2+layer_margin*3
 
 
