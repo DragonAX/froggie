@@ -1,9 +1,16 @@
 import svgwrite 
 from svgwrite import cm, mm
+
+import ezdxf
+from ezdxf import units
+
 import math
 
 MM = 3.7795
 
+doc = ezdxf.new()
+doc.units = units.MM
+doc.header['$MEASUREMENT'] = 1
 
 right_side = True
 
