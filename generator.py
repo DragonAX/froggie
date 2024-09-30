@@ -120,8 +120,8 @@ class Battery():
         self.w = 10+2
         self.h = 18+3
         self.d = 0.6
-        self.lead_length = 26.7
-        self.bumper = 5
+        self.bumper = 3
+        self.lead_length = self.w + self.bumper + 4 
         self.x = x
         self.y = y
         self.rot = rot
@@ -358,29 +358,31 @@ dwgPreview = svgwrite.Drawing('keyboard_case_preview.svg', profile='full', size=
 board = Board(0,0)
 offset_of_extra_key = 4
 offset_from_extra_key = 2
-stagger0 = key_spacing+bevel_width*3
-stagger1 = stagger0-2.5
+stagger0 = key_spacing+bevel_width*3+2
+stagger1 = stagger0-2.5-2
 stagger2 = stagger1-2.5
-stagger3 = stagger2+2.6
-stagger4 = stagger3+4.5
+stagger3 = stagger2+2.8+1
+stagger4 = stagger3+4.5+4
+stagger5 = stagger4+2
 board.addCol(stagger0, bevel_width+key_spacing+offset_of_extra_key+offset_from_extra_key)
 board.addCol(stagger1)
 board.addCol(stagger2)
 board.addCol(stagger3)
 board.addCol(stagger4)
-board.addCol(stagger4)
+board.addCol(stagger5)
 
 for i in range(0,len(board.cols)):
     board.cols[i].addKey()
     board.cols[i].addKey()
     board.cols[i].addKey()
 
+board.cols[3].addKey()
 
 
 #board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
 board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 board.addKey(bevel_width+offset_of_extra_key,bevel_width + stagger0 + key_spacing + key_spacing/2) # extra key
-board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6) # thumb 3
+board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6, -8) # thumb 3
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
 
 # Func row
