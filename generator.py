@@ -278,6 +278,10 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
 
     points = [transpose_point(top_left,bevel_width, bevel_width)]
     points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width))
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+2*bevel_width/3))
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+2*bevel_width/3))
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/3))
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/3))
     points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]))
     
     #rotate and reverse the outline
@@ -287,6 +291,9 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
     
     
     points.append(transpose_point(top_left, board.controllers[0].points[-1][0], 0))
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+2*bevel_width/3)) ###
+    ### Cut Here ###
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/3)) ###
     points.append(transpose_point(top_left, board.controllers[0].points[-1][0], bevel_width))
 
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width))
