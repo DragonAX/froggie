@@ -299,13 +299,15 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width))
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width+top_infill_magic_number))
     points.append((top_left[0]+board.cols[2].x, top_left[1]+bevel_width))
-    points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width))
+    #points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width))
+    points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width))
     if (b):
-        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size*4))
+        points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width+key_spacing*3+3))
+        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+key_spacing*3+3))
         #    points.append(       transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
         points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, bottom_right[1]-slope_tweak_bottom-bevel_width))
     else:
-        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size))
+        #points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size))
         points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width+hole_size))
         points.append(           transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width))
         points.append(           transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
