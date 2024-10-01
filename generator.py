@@ -295,12 +295,14 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
     points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width))
     if (b):
         points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size*4))
+        #    points.append(       transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
+        points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, bottom_right[1]-slope_tweak_bottom-bevel_width))
     else:
         points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size))
         points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width+hole_size))
+        points.append(           transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width))
+        points.append(           transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
     points.extend([ 
-                   transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width),
-                   transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width),
                    (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*3.5),
                    (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
                    transpose_point(bottom_left,corner_cut_tweak_far+bevel_width,-bevel_width),
@@ -376,7 +378,6 @@ for i in range(0,len(board.cols)):
     board.cols[i].addKey()
     board.cols[i].addKey()
 
-board.cols[3].addKey()
 
 
 #board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
@@ -388,6 +389,11 @@ board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_si
 # Func row
 for i in range(6):
     board.addKey(board.cols[0].x+key_spacing*i,bevel_width*3) # extra key
+
+# macro col
+for i in range(3):
+    board.addKey(board.cols[len(board.cols)-1].x+key_spacing+7,
+                 bevel_width*3+i*key_spacing)
 
 keyboard_height = board.keys[0].y+32 
 print(keyboard_height)
@@ -404,8 +410,8 @@ print("Width"+str(keyboard_width))
 mirror_point = keyboard_width*2+layer_margin*3
 
 
-batt.x = keyboard_width-batt.getWidth()-bevel_width
-batt.y = keyboard_height/4
+batt.x = keyboard_width-batt.getWidth()-bevel_width*1.5-1
+batt.y = 7+2*keyboard_height/4
 board.battery=batt
 
 def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
@@ -430,6 +436,15 @@ def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
 
 
 def doLayer2(d, top_left, top_right, bottom_right, bottom_left, b=False):
+    points = calculate_inline(top_left, top_right, bottom_right, bottom_left, b)
+    draw_outline(d, points, outline_colour)
+    
+    draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
+    
+    if(b):
+        draw_battery(d, top_left)
+
+def doLayer2b(d, top_left, top_right, bottom_right, bottom_left, b=False):
     points = calculate_inline(top_left, top_right, bottom_right, bottom_left, b)
     draw_outline(d, points, outline_colour)
     
@@ -496,7 +511,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer2(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer2b(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
 
 # layer 1 (bottom)
 top_left = (layer_margin, keyboard_height*3+layer_margin*4)
@@ -541,7 +556,7 @@ bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
 doLayer0(dwgPreview, top_left, top_right, bottom_right, bottom_left)
 doLayer1(dwgPreview, top_left, top_right, bottom_right, bottom_left)
-doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer2b(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=True)
 doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=False)
 doLayer3(dwgPreview, top_left, top_right, bottom_right, bottom_left)
 doLayer4(dwgPreview, top_left, top_right, bottom_right, bottom_left)
