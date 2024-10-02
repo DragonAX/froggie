@@ -25,7 +25,7 @@ key_spacing = 19.05
 keycap_hole_size = key_spacing
 corner_radius = 0.01
 
-snap_out_width = 1.2*bevel_width/4
+snap_out_width = 1.2#*bevel_width/4
 
 # case shaping
 slope_tweak_top = 8
@@ -37,6 +37,8 @@ controller_magic_number=2
 top_infill_magic_number=8
 inside_infill_magic_number=10
 screw_hole_r = 1
+
+func_row_height_adjust = 0.5
 
 # Line colouring
 inline_colour="#0000ff"
@@ -260,7 +262,7 @@ def draw_keyholes(dwg, board, top_left):
         #inv_x = (x*-1)+mirror_point-keyrect.w
         draw_keyhole(dwg, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
         #draw_keyhole(dwg, inv_x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (-keyrect.rot, MM*(inv_x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
-    
+   
 def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=False):
     points = [top_left]
     if simple:
@@ -273,6 +275,22 @@ def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=Fal
                    transpose_point(bottom_left,corner_cut_tweak_far,0),
                    transpose_point(bottom_left, 0, -math.tan(math.radians(90-25))*corner_cut_tweak_far)])
     return points
+
+
+def calculate_reset_divit(top_left, top_right, bottom_right, bottom_left, wire=False):
+    x_offset = 10
+    width = 10
+    depth = 4.5
+    if wire:
+        width += x_offset
+        x_offset= 0
+    points = []
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]+x_offset+width, 0)) 
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]+x_offset+width, depth)) 
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]+x_offset, depth)) 
+    points.append(transpose_point(top_left, board.controllers[0].points[-1][0]+x_offset, 0)) 
+    return points
+
 
 def calculate_inline_part1(top_left, top_right, bottom_right, bottom_left, b):
 
@@ -291,11 +309,10 @@ def calculate_inline_part1(top_left, top_right, bottom_right, bottom_left, b):
     outline.reverse()
     points.extend(outline)
     
-    
-    points.append(transpose_point(top_left, board.controllers[0].points[-1][0], 0))
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/4)) ###
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/4)) ###
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1])) ###
+    #points.append(transpose_point(top_left, board.controllers[0].points[-1][0], 0)) ### snap-out divit point
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/4)) ### end of snap-out
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/4)) ### start of snap-out
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1])) ### snap-out divit point
     ### Cut Here ###
     return points
 
@@ -361,7 +378,7 @@ def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
 
                    #(top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
     holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2),
-            transpose_point(top_left, keyboard_width-bevel_width/2, slope_tweak_top+bevel_width),
+            transpose_point(top_left, keyboard_width-bevel_width/2, slope_tweak_top+bevel_width/2),
             transpose_point(top_left, board.cols[3].x, board.cols[3].y+key_spacing*4+bevel_width-1),
             transpose_point(top_left, bevel_width+inside_infill_magic_number/2, board.cols[0].keys[2].y+2*key_spacing/3),
             transpose_point(top_right,-bevel_width*2,key_spacing*5.5)
@@ -410,14 +427,15 @@ board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6,
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
 #board.addKey(board.cols[3].x, board.cols[0].keys[2].y+key_spacing ) # thumb 4
 
+
 # Func row
 for i in range(6):
-    board.addKey(board.cols[0].x+key_spacing*i,bevel_width*3) # extra key
+    board.addKey(board.cols[0].x+key_spacing*i,bevel_width*3-func_row_height_adjust) # extra key
 
 # macro col
 for i in range(3):
     board.addKey(board.cols[len(board.cols)-1].x+key_spacing+7,
-                 bevel_width*3+i*key_spacing)
+                 bevel_width*3+i*key_spacing-func_row_height_adjust)
 
 keyboard_height = board.keys[0].y+32 
 print(keyboard_height)
@@ -441,6 +459,9 @@ board.battery=batt
 def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
     draw_keyholes(d, board, top_left)
     
+    points = calculate_reset_divit(top_left, top_right, bottom_right, bottom_left, wire=True)
+    draw_outline(d, points, outline_colour)
+
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
     draw_battery(d, top_left)
@@ -455,6 +476,9 @@ def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
     
+    points = calculate_reset_divit(top_left, top_right, bottom_right, bottom_left)
+    draw_outline(d, points, outline_colour)
+
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
     draw_battery(d, top_left)
 
@@ -468,6 +492,10 @@ def doLayer2(d, top_left, top_right, bottom_right, bottom_left, b=False):
 
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
     
+
+    points = calculate_reset_divit(top_left, top_right, bottom_right, bottom_left)
+    draw_outline(d, points, outline_colour)
+
     if(b):
         draw_battery(d, top_left)
 
@@ -479,6 +507,9 @@ def doLayer2b(d, top_left, top_right, bottom_right, bottom_left, b=False):
     draw_outline(d, points, outline_colour)
     
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
+
+    points = calculate_reset_divit(top_left, top_right, bottom_right, bottom_left)
+    draw_outline(d, points, outline_colour)
     
     if(b):
         draw_battery(d, top_left)
