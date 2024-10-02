@@ -25,6 +25,8 @@ key_spacing = 19.05
 keycap_hole_size = key_spacing
 corner_radius = 0.01
 
+snap_out_width = 1.2*bevel_width/4
+
 # case shaping
 slope_tweak_top = 8
 slope_tweak_bottom = 20
@@ -34,7 +36,7 @@ corner_cut_tweak_far = 15
 controller_magic_number=2
 top_infill_magic_number=8
 inside_infill_magic_number=10
-screw_hole_r = 1.8/2
+screw_hole_r = 1
 
 # Line colouring
 inline_colour="#0000ff"
@@ -272,17 +274,17 @@ def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=Fal
                    transpose_point(bottom_left, 0, -math.tan(math.radians(90-25))*corner_cut_tweak_far)])
     return points
 
-def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
+def calculate_inline_part1(top_left, top_right, bottom_right, bottom_left, b):
 
     outline = calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=True)
 
-    points = [transpose_point(top_left,bevel_width, bevel_width)]
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width))
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+2*bevel_width/3))
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+2*bevel_width/3))
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/3))
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/3))
-    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]))
+    points = [transpose_point(top_left,bevel_width, 0)]
+    #points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width))
+    #points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+2*bevel_width/3))
+    #points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+2*bevel_width/3))
+    #points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/3))
+    #points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/3))
+    #points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]))
     
     #rotate and reverse the outline
     outline = outline[1:]+outline[:1]
@@ -291,9 +293,18 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
     
     
     points.append(transpose_point(top_left, board.controllers[0].points[-1][0], 0))
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+2*bevel_width/3)) ###
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/4)) ###
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/4)) ###
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1])) ###
     ### Cut Here ###
-    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/3)) ###
+    return points
+
+def calculate_inline_part2(top_left, top_right, bottom_right, bottom_left, b):
+    points = []
+    points.append(transpose_point(top_left, bevel_width, bevel_width)) ###
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width)) ###
+    points.append(transpose_point(board.controllers[0].points[0],top_left[0], top_left[1]+bevel_width/4+snap_out_width )) ###
+    points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]+bevel_width/4+snap_out_width)) ###
     points.append(transpose_point(top_left, board.controllers[0].points[-1][0], bevel_width))
 
     points.append(transpose_point(board.controllers[0].points[-1],top_left[0]+controller_magic_number, top_left[1]+bevel_width))
@@ -309,10 +320,10 @@ def calculate_inline(top_left, top_right, bottom_right, bottom_left, b):
     else:
         #points.append((top_left[0]+board.cols[-1].x+hole_size+2*bigger_hole_delta+2, top_right[1]+slope_tweak_top+bevel_width+hole_size))
         points.append((top_right[0]-bevel_width, top_right[1]+slope_tweak_top+bevel_width+hole_size))
-        points.append(           transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width))
-        points.append(           transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
+        points.append(transpose_point(bottom_right,-bevel_width,-slope_tweak_bottom-corner_cut_tweak-bevel_width))
+        points.append(transpose_point(bottom_right,-corner_cut_tweak-bevel_width, -slope_tweak_bottom-bevel_width))
     points.extend([ 
-                   (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*3.5),
+                   #(top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*3.5),
                    (top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
                    transpose_point(bottom_left,corner_cut_tweak_far+bevel_width,-bevel_width),
                    transpose_point(bottom_left, bevel_width, (-math.tan(math.radians(90-25))*corner_cut_tweak_far) -bevel_width),
@@ -347,10 +358,13 @@ def calculate_top_inline(top_left, top_right, bottom_right, bottom_left):
 
 
 def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
+
+                   #(top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
     holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2),
-            transpose_point(top_left, keyboard_width-bevel_width, slope_tweak_top+bevel_width),
-            transpose_point(top_left, board.cols[3].x+key_spacing/2, board.cols[3].y+key_spacing*4),
-            transpose_point(top_left, bevel_width+inside_infill_magic_number/2, board.cols[0].keys[2].y+2*key_spacing/3)
+            transpose_point(top_left, keyboard_width-bevel_width/2, slope_tweak_top+bevel_width),
+            transpose_point(top_left, board.cols[3].x, board.cols[3].y+key_spacing*4+bevel_width-1),
+            transpose_point(top_left, bevel_width+inside_infill_magic_number/2, board.cols[0].keys[2].y+2*key_spacing/3),
+            transpose_point(top_right,-bevel_width*2,key_spacing*5.5)
             ]
     #holes.extend(transpose_points(mirror_points(holes), mirror_point, 0))
     for hole in holes:
@@ -387,13 +401,14 @@ for i in range(0,len(board.cols)):
     board.cols[i].addKey()
     board.cols[i].addKey()
 
-
+board.cols[3].addKey()
 
 #board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
 board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 board.addKey(bevel_width+offset_of_extra_key,bevel_width + stagger0 + key_spacing + key_spacing/2) # extra key
 board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6, -8) # thumb 3
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
+#board.addKey(board.cols[3].x, board.cols[0].keys[2].y+key_spacing ) # thumb 4
 
 # Func row
 for i in range(6):
@@ -445,16 +460,22 @@ def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
 
 
 def doLayer2(d, top_left, top_right, bottom_right, bottom_left, b=False):
-    points = calculate_inline(top_left, top_right, bottom_right, bottom_left, b)
+    points = calculate_inline_part1(top_left, top_right, bottom_right, bottom_left, b)
     draw_outline(d, points, outline_colour)
     
+    points = calculate_inline_part2(top_left, top_right, bottom_right, bottom_left, b)
+    draw_outline(d, points, outline_colour)
+
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
     
     if(b):
         draw_battery(d, top_left)
 
 def doLayer2b(d, top_left, top_right, bottom_right, bottom_left, b=False):
-    points = calculate_inline(top_left, top_right, bottom_right, bottom_left, b)
+    points = calculate_inline_part1(top_left, top_right, bottom_right, bottom_left, b)
+    draw_outline(d, points, outline_colour)
+    
+    points = calculate_inline_part2(top_left, top_right, bottom_right, bottom_left, b)
     draw_outline(d, points, outline_colour)
     
     draw_screw_holes(d, top_left, top_right, bottom_right, bottom_left)
