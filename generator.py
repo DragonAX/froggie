@@ -157,11 +157,11 @@ class KeyRect():
         self.scale=scale
     def getCenter(self):
         return (self.x+self.w/2, self.y+self.h/2)
-    def getPoints(self):
-        points = [(self.x, self.y),
-                  (self.x+self.w, self.y),
-                  (self.x+self.w, self.y+self.h),
-                  (self.x, self.y+self.h)]
+    def getPoints(self, margin=0):
+        points = [(self.x-margin, self.y-margin),
+                  (self.x+self.w+margin*2, self.y-margin),
+                  (self.x+self.w+margin*2, self.y+self.h+margin*2),
+                  (self.x-margin, self.y+self.h+margin*2)]
         points = rotate_points_around(points, self.rot, self.getCenter())
         return points
 
@@ -240,15 +240,13 @@ def draw_keyholes(msp, board, top_left):
     mirror_point = keyboard_width*2+layer_margin*3
     for col in board.cols:
         for keyrect in col.keys:
-            x = keyrect.x+top_left[0]
-            inv_x = (x*-1)+mirror_point-keyrect.w
-            draw_keyhole(msp, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
+            points = keyrect.getPoints()
+            points = transpose_points(points, top_left[0],top_left[1])
+            msp.add_lwpolyline(points=points, close=True)
     for keyrect in board.keys:
-        x = keyrect.x+top_left[0]
-        draw_keyhole(msp, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, 
-                     rot = keyrect.rot, 
-                     offsetx = (x+keyrect.w/2),
-                     offsety = (keyrect.y+top_left[1]+keyrect.h/2))
+        points = keyrect.getPoints()
+        points = transpose_points(points, top_left[0],top_left[1])
+        msp.add_lwpolyline(points=points, close=True)
    
 def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=False):
     points = [top_left]
@@ -465,12 +463,16 @@ def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
 def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
     for col in board.cols:
         for keyrect in col.keys:
-            draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius)
+            #draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius)
+            points = transpose_points_by_point(keyrect.getPoints(margin=BHD), top_left)
+            d.add_lwpolyline(points=points, close=True)
     for keyrect in board.keys:
-        draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, 
-                     rot = keyrect.rot, 
-                     offsetx = (keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), 
-                     offsety = (keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2))
+        points = transpose_points_by_point(keyrect.getPoints(margin=BHD), top_left)
+        d.add_lwpolyline(points=points, close=True)
+        #draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, 
+        #             rot = keyrect.rot, 
+        #             offsetx = (keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), 
+        #             offsety = (keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2))
     
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
