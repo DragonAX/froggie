@@ -8,9 +8,6 @@ import math
 
 MM = 3.7795
 
-doc = ezdxf.new()
-doc.units = units.MM
-doc.header['$MEASUREMENT'] = 1
 
 right_side = True
 
@@ -91,6 +88,7 @@ def rotate_points(points, angle_degrees):
         rotated_points.append((new_x, new_y))
 
     return rotated_points
+
 def rotate_points_around(points, angle_degrees, rotation_point):
     # Convert the angle from degrees to radians
     angle_radians = math.radians(angle_degrees)
@@ -193,7 +191,7 @@ class Column():
 class Controller():
     w = 18.3+0.2
     h = 34.1+0.2
-    def __init__(self,dwg,  x, y, rot=0):
+    def __init__(self,  x, y, rot=0):
         self.rot = rot
         self.x = x
         self.y = y
@@ -206,9 +204,6 @@ class Controller():
                        (-controller_magic_number+19-controller_magic_number, bevel_width),
                        (-controller_magic_number+19-controller_magic_number, 0)], x, y)
 
-        #self.path = dwg.path(["V {bevel_width}", "H -4", "V 24.5", "H 19", "V -24.5", "H -4", "V {bevel_width}"], stroke="black",
-        #                              fill="none",
-        #                              stroke_width=1)
 
 class Board():
     def __init__(self, x, y):
@@ -232,36 +227,28 @@ class Board():
 
 
 
-def draw_keyhole(dwg, x, y, width, height, rx, ry, txfrm = None, colour=inline_colour):
-    if txfrm == None:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=colour))
-    else:
-        dwg.add(dwg.rect((x*mm, y*mm), (width*mm, height*mm), rx=rx*mm, ry=ry*mm, fill='none', stroke=colour, transform=txfrm))
+def draw_keyhole(msp, x, y, width, height, rx, ry, rot = 0, offsetx=0, offsety=0, colour=inline_colour):
+    points=[(x, y), (x, y+height), (x+width, y+height), (x+width, y), (x, y)]
+    msp.add_lwpolyline(points=points, close=True)
+        
 
 
-def draw_outline(dwg, points, colour = outline_colour):
-    outline = dwg.polygon(fill='none', stroke=colour)
-    outline.points.extend(scale_points(points, MM))
-    dwg.add(outline)
-    
-    #outline = dwg.polygon(fill='none', stroke=colour)
-    #points = transpose_points(mirror_points(points), mirror_point, 0)
-    #outline.points.extend(scale_points(points, MM))
-    #dwg.add(outline)
+def draw_outline(msp, points, colour = outline_colour):
+    msp.add_lwpolyline(points=points, close=True)
 
-def draw_keyholes(dwg, board, top_left):
+def draw_keyholes(msp, board, top_left):
     mirror_point = keyboard_width*2+layer_margin*3
     for col in board.cols:
         for keyrect in col.keys:
             x = keyrect.x+top_left[0]
             inv_x = (x*-1)+mirror_point-keyrect.w
-            draw_keyhole(dwg, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
-            #draw_keyhole(dwg, inv_x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
+            draw_keyhole(msp, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius)
     for keyrect in board.keys:
         x = keyrect.x+top_left[0]
-        #inv_x = (x*-1)+mirror_point-keyrect.w
-        draw_keyhole(dwg, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
-        #draw_keyhole(dwg, inv_x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (-keyrect.rot, MM*(inv_x+keyrect.w/2), MM*(keyrect.y+top_left[1]+keyrect.h/2)))
+        draw_keyhole(msp, x, keyrect.y+top_left[1], keyrect.w, keyrect.h, corner_radius,corner_radius, 
+                     rot = keyrect.rot, 
+                     offsetx = (x+keyrect.w/2),
+                     offsety = (keyrect.y+top_left[1]+keyrect.h/2))
    
 def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=False):
     points = [top_left]
@@ -374,28 +361,37 @@ def calculate_top_inline(top_left, top_right, bottom_right, bottom_left):
     return points
 
 
-def draw_screw_holes(dwg, top_left, top_right, bottom_right, bottom_left):
+def draw_screw_holes(msp, top_left, top_right, bottom_right, bottom_left):
 
-                   #(top_left[0]+board.cols[3].x, top_right[1]+board.cols[3].y+key_spacing*4),
     holes = [transpose_point(top_left, board.controllers[0].points[-1][0]+bevel_width*1.5, bevel_width*1.2),
             transpose_point(top_left, keyboard_width-bevel_width/2, slope_tweak_top+bevel_width/2),
             transpose_point(top_left, board.cols[3].x, board.cols[3].y+key_spacing*4+bevel_width-1),
             transpose_point(top_left, bevel_width+inside_infill_magic_number/2, board.cols[0].keys[2].y+2*key_spacing/3),
             transpose_point(top_right,-bevel_width*2,key_spacing*5.5)
             ]
-    #holes.extend(transpose_points(mirror_points(holes), mirror_point, 0))
     for hole in holes:
-        dwg.add(dwg.circle((hole[0]*mm, hole[1]*mm), r=screw_hole_r, fill='none', stroke=inline_colour))
+        msp.add_circle(center=hole, radius=screw_hole_r)
 
-def draw_battery(dwg, top_left):
+def draw_battery(msp, top_left):
     points = transpose_points(board.battery.getPoints(), top_left[0], top_left[1])
 
-    draw_outline(dwg, points, inline_colour)
+    draw_outline(msp, points, inline_colour)
 
 ### BOARD Definition
 
-dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
-dwgPreview = svgwrite.Drawing('keyboard_case_preview.svg', profile='full', size=(f"400mm", f"600mm"))
+#dwg = svgwrite.Drawing('keyboard_case.svg', profile='full', size=(f"400mm", f"600mm"))
+#dwgPreview = svgwrite.Drawing('keyboard_case_preview.svg', profile='full', size=(f"400mm", f"600mm"))
+
+docCuts = ezdxf.new()
+docCuts.units = units.MM
+docCuts.header['$MEASUREMENT'] = 1
+mspCuts = docCuts.modelspace()
+
+docPreview = ezdxf.new()
+docPreview.units = units.MM
+docPreview.header['$MEASUREMENT'] = 1
+mspPreview = docPreview.modelspace()
+
 # Generate top 
 board = Board(0,0)
 offset_of_extra_key = 4
@@ -440,7 +436,7 @@ for i in range(3):
 keyboard_height = board.keys[0].y+32 
 print(keyboard_height)
 print(board.keys[0].y)
-board.controllers.append(Controller(dwg, bevel_width+5, 0))
+board.controllers.append(Controller(bevel_width+5, 0))
 
 ####
 
@@ -471,7 +467,10 @@ def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
         for keyrect in col.keys:
             draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius)
     for keyrect in board.keys:
-        draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, txfrm = 'rotate(%s, %s, %s)' % (keyrect.rot, MM*(keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), MM*(keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2)))
+        draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, 
+                     rot = keyrect.rot, 
+                     offsetx = (keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), 
+                     offsety = (keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2))
     
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
@@ -546,7 +545,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer4(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer4(mspCuts, top_left, top_right, bottom_right, bottom_left)
 
 
 # layer 3 (same as plate but bigger holes)
@@ -555,7 +554,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer3(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer3(mspCuts, top_left, top_right, bottom_right, bottom_left)
 
 # layer 2 (just the outline, where all the wiring is)
 top_left = (layer_margin, keyboard_height*2+layer_margin*3)
@@ -563,7 +562,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer2(dwg, top_left, top_right, bottom_right, bottom_left, b=False)
+doLayer2(mspCuts, top_left, top_right, bottom_right, bottom_left, b=False)
 
 
 # layer 2b (just the outline, where all the wiring is)
@@ -572,7 +571,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer2b(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer2b(mspCuts, top_left, top_right, bottom_right, bottom_left, b=True)
 
 # layer 1 (bottom)
 top_left = (layer_margin, keyboard_height*3+layer_margin*4)
@@ -580,7 +579,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer1(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer1(mspCuts, top_left, top_right, bottom_right, bottom_left)
 
 # layer 0 (tippy top)
 
@@ -589,7 +588,7 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer0(dwg, top_left, top_right, bottom_right, bottom_left)
+doLayer0(mspCuts, top_left, top_right, bottom_right, bottom_left)
 # layer 0b (tippy top)
 
 top_left = (layer_margin*2+keyboard_width, keyboard_height*2+layer_margin*3)
@@ -597,16 +596,16 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer0(dwg, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer0(mspCuts, top_left, top_right, bottom_right, bottom_left, b=True)
 
 
 # hole-tester
 
 top_left = (layer_margin*3+keyboard_width, keyboard_height*4+layer_margin*5)
 
-doHoleTester(dwg, top_left)
+doHoleTester(mspCuts, top_left)
 
-dwg.save()
+docCuts.saveas("keeb_cuts.dxf")
 
 ##### Generate layered preview
 
@@ -615,11 +614,12 @@ top_right = (top_left[0]+keyboard_width, top_left[1])
 bottom_right = (top_left[0]+keyboard_width, top_left[1]+keyboard_height)
 bottom_left = (top_left[0], top_left[1]+keyboard_height)
 
-doLayer0(dwgPreview, top_left, top_right, bottom_right, bottom_left)
-doLayer1(dwgPreview, top_left, top_right, bottom_right, bottom_left)
-doLayer2b(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=True)
-doLayer2(dwgPreview, top_left, top_right, bottom_right, bottom_left, b=False)
-doLayer3(dwgPreview, top_left, top_right, bottom_right, bottom_left)
-doLayer4(dwgPreview, top_left, top_right, bottom_right, bottom_left)
+doLayer0(mspPreview, top_left, top_right, bottom_right, bottom_left)
+doLayer1(mspPreview, top_left, top_right, bottom_right, bottom_left)
+doLayer2b(mspPreview, top_left, top_right, bottom_right, bottom_left, b=True)
+doLayer2(mspPreview, top_left, top_right, bottom_right, bottom_left, b=False)
+doLayer3(mspPreview, top_left, top_right, bottom_right, bottom_left)
+doLayer4(mspPreview, top_left, top_right, bottom_right, bottom_left)
 
-dwgPreview.save()
+docPreview.saveas("keeb_preview.dxf")
+
