@@ -1,13 +1,8 @@
-import svgwrite 
-from svgwrite import cm, mm
 
 import ezdxf
 from ezdxf import units
 
 import math
-
-MM = 3.7795
-
 
 right_side = True
 
@@ -33,7 +28,7 @@ corner_cut_tweak_far = 15
 controller_magic_number=2
 top_infill_magic_number=8
 inside_infill_magic_number=10
-screw_hole_r = 1
+screw_hole_r =  0.6
 
 func_row_height_adjust = 0.5
 
@@ -191,6 +186,7 @@ class Column():
 class Controller():
     w = 18.3+0.2
     h = 34.1+0.2
+    support_length = 17
     def __init__(self,  x, y, rot=0):
         self.rot = rot
         self.x = x
@@ -203,7 +199,18 @@ class Controller():
                        (-controller_magic_number+19, bevel_width),
                        (-controller_magic_number+19-controller_magic_number, bevel_width),
                        (-controller_magic_number+19-controller_magic_number, 0)], x, y)
-
+        self.points_with_support = transpose_points([(0,0),
+                       (0,bevel_width),
+                       (-controller_magic_number, bevel_width),
+                       (-controller_magic_number, bevel_width+24.5),
+                       (-controller_magic_number+19/3, bevel_width+24.5), #support
+                       (-controller_magic_number+19/3, bevel_width+24.5-self.support_length),#support
+                       (-controller_magic_number+2*19/3, bevel_width+24.5-self.support_length),#support
+                       (-controller_magic_number+2*19/3, bevel_width+24.5), #support
+                       (-controller_magic_number+19, bevel_width+24.5),
+                       (-controller_magic_number+19, bevel_width),
+                       (-controller_magic_number+19-controller_magic_number, bevel_width),
+                       (-controller_magic_number+19-controller_magic_number, 0)], x, y)
 
 class Board():
     def __init__(self, x, y):
@@ -248,12 +255,16 @@ def draw_keyholes(msp, board, top_left):
         points = transpose_points(points, top_left[0],top_left[1])
         msp.add_lwpolyline(points=points, close=True)
    
-def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=False):
+def calculate_outline(top_left, top_right, bottom_right, bottom_left, simple=False, controller_support=False):
     points = [top_left]
     if simple:
         points.append(transpose_point(board.controllers[0].points[-1],top_left[0], top_left[1]))
     else:
-        points.extend(transpose_points(board.controllers[0].points,top_left[0], top_left[1]))
+        if controller_support:
+            points.extend(transpose_points(board.controllers[0].points_with_support,top_left[0], top_left[1]))
+        else:
+            points.extend(transpose_points(board.controllers[0].points,top_left[0], top_left[1]))
+        
     points.extend([transpose_point(top_right,0,slope_tweak_top), 
                    transpose_point(bottom_right,0,-slope_tweak_bottom-corner_cut_tweak),
                    transpose_point(bottom_right,-corner_cut_tweak, -slope_tweak_bottom),
@@ -451,12 +462,15 @@ batt.y = 7+2*keyboard_height/4
 board.battery=batt
 
 def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
+    """
+    The switchplate
+    """
     draw_keyholes(d, board, top_left)
     
     points = calculate_reset_divit(top_left, top_right, bottom_right, bottom_left, wire=True)
     draw_outline(d, points, outline_colour)
 
-    points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
+    points = calculate_outline(top_left, top_right, bottom_right, bottom_left, controller_support=True)
     draw_outline(d, points)
     draw_battery(d, top_left)
 
