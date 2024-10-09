@@ -114,7 +114,7 @@ def rotate_points_around(points, angle_degrees, rotation_point):
 
 class Battery():
     def __init__(self, x, y, rot=0):
-        self.w = 10+2
+        self.w = 10+0.5
         self.h = 18+3
         self.d = 0.6
         self.bumper = 3
