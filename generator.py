@@ -1,4 +1,3 @@
-
 import ezdxf
 from ezdxf import units
 
@@ -150,14 +149,18 @@ class KeyRect():
         self.y = y
         self.rot=rot
         self.scale=scale
-    def getCenter(self):
-        return (self.x+self.w/2, self.y+self.h/2)
+    def getCenter(self, margin):
+        x = self.x-margin
+        y = self.y-margin
+        w = self.w+margin*2
+        h = self.h+margin*2
+        return (x+w/2, y+h/2)
     def getPoints(self, margin=0):
         points = [(self.x-margin, self.y-margin),
-                  (self.x+self.w+margin*2, self.y-margin),
-                  (self.x+self.w+margin*2, self.y+self.h+margin*2),
-                  (self.x-margin, self.y+self.h+margin*2)]
-        points = rotate_points_around(points, self.rot, self.getCenter())
+                  (self.x+self.w+margin, self.y-margin),
+                  (self.x+self.w+margin, self.y+self.h+margin),
+                  (self.x-margin, self.y+self.h+margin)]
+        points = rotate_points_around(points, self.rot, self.getCenter(margin))
         return points
 
 class KeyCapRect(KeyRect):
@@ -428,7 +431,7 @@ board.cols[3].addKey()
 #board.addKey(bevel_width,bevel_width + stagger0 + key_spacing/2) # top extra key
 board.addKey(board.cols[0].x-key_spacing +2, board.cols[0].keys[2].y+hole_size+10.25,90-25, scale=thumb_scale ) # thumb 1
 board.addKey(bevel_width+offset_of_extra_key,bevel_width + stagger0 + key_spacing + key_spacing/2) # extra key
-board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6, -8) # thumb 3
+board.addKey(board.cols[1].x+key_spacing/2, board.cols[1].keys[2].y+hole_size+6+0.25, -8) # thumb 3
 board.addKey(board.cols[1].x+key_spacing/2 - 22, board.cols[0].keys[2].y+hole_size+7.25,-15 ) # thumb 2
 #board.addKey(board.cols[3].x, board.cols[0].keys[2].y+key_spacing ) # thumb 4
 
@@ -457,7 +460,7 @@ print("Width"+str(keyboard_width))
 mirror_point = keyboard_width*2+layer_margin*3
 
 
-batt.x = keyboard_width-batt.getWidth()-bevel_width*1.5-1
+batt.x = keyboard_width-batt.getWidth()-bevel_width*1.5-1-0.75 # adjusted not to clip corner-cut
 batt.y = 7+2*keyboard_height/4
 board.battery=batt
 
@@ -477,16 +480,11 @@ def doLayer4(d, top_left, top_right, bottom_right, bottom_left):
 def doLayer3(d, top_left, top_right, bottom_right, bottom_left):
     for col in board.cols:
         for keyrect in col.keys:
-            #draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius)
             points = transpose_points_by_point(keyrect.getPoints(margin=BHD), top_left)
             d.add_lwpolyline(points=points, close=True)
     for keyrect in board.keys:
         points = transpose_points_by_point(keyrect.getPoints(margin=BHD), top_left)
         d.add_lwpolyline(points=points, close=True)
-        #draw_keyhole(d, keyrect.x+top_left[0]-BHD, keyrect.y+top_left[1]-BHD, keyrect.w+BHD*2, keyrect.h+BHD*2, corner_radius,corner_radius, 
-        #             rot = keyrect.rot, 
-        #             offsetx = (keyrect.x+top_left[0]-BHD+(keyrect.w+BHD*2)/2), 
-        #             offsety = (keyrect.y+top_left[1]-BHD+(keyrect.h+BHD*2)/2))
     
     points = calculate_outline(top_left, top_right, bottom_right, bottom_left)
     draw_outline(d, points)
